@@ -1,0 +1,355 @@
+---
+title: 'Group 2: Job Satisfaction Risk Profiling and Workplace Equity'
+author: "Dorothy Worbie"
+date: "2025-11-17"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+```{r Set Up}
+
+# 1. Install and load libraries \
+# install.packages("caret")
+# library(tidyverse)
+# library(caret)
+library(dplyr)
+library(ggplot2)
+# install.packages("readxl")
+library(readxl)
+
+# 2. Load the CSV file
+data <- read_xlsx("Updated Dataset_Mental Health.xlsx")
+
+# 3. Data Inspection
+glimpse(data)
+summary(data)
+
+# 4. Basic Data Cleaning/Conversion
+# Convert categorical variables to factors for proper modeling
+data$Burnout_Risk <- as.factor(data$Burnout_Risk)
+data$Salary_Range <- as.factor(data$Salary_Range)
+
+```
+
+```{r Objective 5}
+# 1. Objective 5: Job Satisfaction and Employee Retention
+# ___Goal: Determine if a low Work_Life_Balance_Score is a strong predictor of increased Mental_Health_Days_Off.___
+
+# A. Correlation Matrix (Descriptive Exercise)
+
+correlation_matrix <- data %>%
+  select(Job_Satisfaction, Work_Life_Balance_Score, Mental_Health_Days_Off, Manager_Support_Score, Career_Growth_Score) %>%
+  cor(use = "pairwise.complete.obs") # Handles any missing data
+
+print("Correlation Matrix:")
+print(correlation_matrix)
+
+
+# Make sure you have the 'corrplot' package installed
+install.packages("corrplot") 
+library(corrplot)
+
+# --- Define your correlation matrix ---
+# I'm recreating a sample matrix based on the values in your image.
+# You should use your actual 'correlation_matrix' variable from your R code.
+correlation_matrix_data <- matrix(c(
+  1.00,  0.04,  0.01,  0.01,  0.01,
+  0.04,  1.00,  0.03,  0.02,  0.02,
+  0.01,  0.03,  1.00,  0.02,  0.01,
+  0.01,  0.02,  0.02,  1.00,  0.01,
+  0.01,  0.02,  0.01,  0.01,  1.00
+), nrow=5, byrow=TRUE)
+
+colnames(correlation_matrix_data) <- c("Job_Satisfaction", "Work_Life_Balance_Score", "Mental_Health_Days_Off", "Manager_Support_Score", "Career_Growth_Score")
+rownames(correlation_matrix_data) <- c("Job_Satisfaction", "Work_Life_Balance_Score", "Mental_Health_Days_Off", "Manager_Support_Score", "Career_Growth_Score")
+
+# Adjusting values slightly to match the image provided, specifically Career_Growth_Score row/col
+# In your actual R script, you would just use your `correlation_matrix` variable directly.
+correlation_matrix_for_plot <- matrix(c(
+  1.00,  0.04,  0.01,  0.01,  0.11, # Job_Satisfaction correlations
+  0.04,  1.00,  0.03,  0.02,  0.02, # Work_Life_Balance_Score correlations
+  0.01,  0.03,  1.00,  0.02,  0.01, # Mental_Health_Days_Off correlations
+  0.01,  0.02,  0.02,  1.00,  0.02, # Manager_Support_Score correlations
+  0.11,  0.02,  0.01,  0.02,  1.00  # Career_Growth_Score correlations (symmetric with upper)
+), nrow=5, byrow=TRUE)
+
+colnames(correlation_matrix_for_plot) <- c("Job_Satisfaction", "Work_Life_Balance_Score", "Mental_Health_Days_Off", "Manager_Support_Score", "Career_Growth_Score")
+rownames(correlation_matrix_for_plot) <- c("Job_Satisfaction", "Work_Life_Balance_Score", "Mental_Health_Days_Off", "Manager_Support_Score", "Career_Growth_Score")
+
+
+# --- corrplot function call for the enhanced heatmap ---
+corrplot(
+    correlation_matrix_for_plot,
+    method = "circle",      # Use circles to represent correlation strength
+    type = "upper",         # Show only the upper triangular matrix
+    order = "original",     # Keep original order of variables
+    addCoef.col = "black",  # Add correlation coefficients in black text
+    tl.col = "black",       # Set text label color to black
+    tl.srt = 45,            # Rotate text labels for better readability
+    diag = FALSE,           # Do not show self-correlation on the diagonal
+    col = COL2('RdBu', 200), # Use a Red-Blue divergent color palette (200 shades)
+    # Customize the color legend
+    cl.pos = 'r',           # Position the color legend on the right
+    cl.align.text = 'l',    # Align color legend text to the left
+    cl.length = 11,         # Number of ticks in the color legend
+    cl.cex = 0.8,           # Font size of color legend text
+    cl.ratio = 0.2          # Ratio of color legend width to the plot
+)
+
+# You can also add a main title using the 'title' argument within corrplot 
+# or by using mtext() after the plot.
+mtext("Correlation Matrix: Job Factors & Mental Health", side = 3, line = 2, cex = 1.2)
+
+
+```
+
+```{r}
+
+# B. Visualize the specific relationship
+
+data %>%
+  ggplot(aes(x = Work_Life_Balance_Score, y = Mental_Health_Days_Off)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Work-Life Balance vs. Days Off")
+# ggsave("wlb_vs_mhd.png")
+
+```
+
+```{r}
+
+# C. Model to predict Job Satisfaction
+
+model_js <- lm(Job_Satisfaction ~ Burnout_Level + Stress_Level + Manager_Support_Score + Career_Growth_Score + Work_Life_Balance_Score + Years_At_Company, data = data)
+
+summary(model_js)
+
+# Examine the P-values and Coefficients (Estimate) to see which variables are significant predictors of Job_Satisfaction.
+
+```
+
+```{r}
+
+# D. Model for Specific Goal (Goal)
+
+model_mhd <- lm(Mental_Health_Days_Off ~ Work_Life_Balance_Score, data = data)
+
+summary(model_mhd)
+# The coefficient for Work_Life_Balance_Score will indicate the magnitude and direction of the relationship.
+# A negative coefficient would support the hypothesis (low score -> more days off).
+
+```
+
+```{r next step}
+
+model_interaction <- lm(formula = Job_Satisfaction ~ Burnout_Level + Stress_Level + Manager_Support_Score + Career_Growth_Score + Work_Life_Balance_Score + Years_At_Company + Manager_Support_Score:Work_Life_Balance_Score, data = data)
+summary(model_interaction)
+
+```
+
+```{r Refined Goal Test}
+
+# E. Poisson Model for Count Data (Mental_Health_Days_Off). Employing this model because MLR was a poor fit
+
+model_poisson <- glm(Mental_Health_Days_Off ~ Work_Life_Balance_Score + Stress_Level,
+                     data = data,
+                     family = "poisson")
+summary(model_poisson)
+
+```
+
+```{r}
+
+# F. Quadratic Model for Job Satisfaction (Testing for Non-Linearity)
+
+model_js_quad <- lm(Job_Satisfaction ~ Burnout_Level + I(Burnout_Level^2) + Stress_Level + 
+    Manager_Support_Score + Career_Growth_Score + Work_Life_Balance_Score + Years_At_Company, 
+    data = data)
+summary(model_js_quad)
+
+```
+
+```{r}
+
+# G. Stepwise Model Selection for Job_Satisfaction
+
+# 1. Define the Full Model 
+
+# This model includes all the main predictors tested so far.
+
+model_full <- lm(Job_Satisfaction ~ Burnout_Level + Stress_Level + Manager_Support_Score + 
+                 Career_Growth_Score + Work_Life_Balance_Score + Years_At_Company, 
+                 data = data)
+
+# 2. Perform Backward Stepwise Selection
+
+# The step() function is used for this process.
+
+# direction = "backward" starts with all predictors and removes the least effective ones.
+
+# trace = 1 is useful for seeing which variable is dropped at each step.
+
+model_final_stepwise <- step(model_full, direction = "backward", trace = 1)
+
+# 3. Print the Summary of the Final, Best Model
+
+# This will show the coefficients, p-values, and R-squared for the selected predictors.
+
+summary(model_final_stepwise)
+
+```
+
+```{r}
+
+# New model testing high-impact structural/compensatory variables
+
+# 1. Ensure Work_Mode is treated as a categorical variable (factor)
+
+data$Work_Mode <- as.factor(data$Work_Mode)
+
+
+# 2. Run the linear model (lm)
+
+model_high_impact <- lm(Job_Satisfaction ~ Work_Life_Balance_Score + Work_Mode + Min_Salary + Burnout_Level, 
+                        data = data)
+
+# 3. Print the summary for analysis
+
+summary(model_high_impact)
+
+```
+
+```{r}
+
+# R Code for Feature Engineering
+
+# 1. Load the CSV data
+# Using the standard read.csv function in base R
+
+data <- read_xlsx("Updated Dataset_Mental Health.xlsx")
+
+# 2. Create the new feature: Hourly Pay Rate
+
+# Hourly Pay Rate = Min_Salary / (Work_Hours_Per_Week * 52 weeks)
+
+data$Hourly_Pay_Rate <- data$Min_Salary / (data$Work_Hours_Per_Week * 52)
+
+# 3. Save the updated DataFrame to a new CSV file
+# row.names = FALSE prevents R from writing an extra index column
+write.csv(data, "data_with_engineered_feature.csv", row.names = FALSE)
+
+# You can optionally inspect the new column:
+ head(data[c("Min_Salary", "Work_Hours_Per_Week", "Hourly_Pay_Rate")])
+ 
+```
+
+```{r}
+
+# R Code for Model with Engineered Feature
+
+# 1. Load the new data file containing the Hourly_Pay_Rate column
+data_new <- read.csv("data_with_engineered_feature.csv")
+
+# 2. Ensure Work_Mode is treated as a categorical variable
+
+data_new$Work_Mode <- as.factor(data_new$Work_Mode)
+
+# 3. Run the linear model (lm)
+# We test: Hourly Pay Rate, Burnout Level, and Work Mode
+
+model_engineered <- lm(Job_Satisfaction ~ Hourly_Pay_Rate + Burnout_Level + Work_Mode, 
+                       data = data_new)
+
+# 4. Print the summary for analysis
+summary(model_engineered)
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+
+# R Code for Logistic Regression (Excluding Burnout_Level)
+
+# 1. Train the corrected Logistic Regression model
+# We predict Burnout_Risk using only independent psychological and workload factors.
+model_br_fixed <- glm(Burnout_Risk ~ Stress_Level + Work_Hours_Per_Week + 
+                      Sleep_Hours + Manager_Support_Score + Job_Satisfaction,
+                      data = data,
+                      family = "binomial")
+
+# 2. Print the summary for analysis
+summary(model_br_fixed)
+
+
+# R Code for Odds Ratio Visualization (Burnout Risk)
+
+# Load necessary library (needed for creating the Odds Ratio Plot)
+# You may need to run install.packages("ggplot2") and install.packages("broom")
+library(ggplot2)
+library(broom)
+
+# 1. Calculate the Odds Ratios and Confidence Intervals
+# The 'tidy' function extracts model coefficients, and we exponentiate them
+# to convert Log-Odds (Estimates) into Odds Ratios (e.g., exp(Estimate)).
+odds_data <- tidy(model_br_fixed, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(term != "(Intercept)") # Remove the intercept for clarity
+
+# 2. Create the Odds Ratio Plot
+ggplot(odds_data, aes(x = estimate, y = term)) +
+  geom_point() + # Plot the Odds Ratio
+  geom_errorbar(aes(xmin = conf.low, xmax = conf.high), width = 0.2) + # Plot the 95% Confidence Interval
+  geom_vline(xintercept = 1, linetype = "dashed", color = "red") + # Add the critical line (where Odds Ratio = 1)
+  labs(
+    title = "Odds Ratio Plot for Burnout Risk Predictors",
+    x = "Odds Ratio (Risk Multiplier)",
+    y = "Predictor Variable"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(trans = 'log2') # Use a log scale for better viewing
+
+```
+
+```{r}
+
+# R Code for Objective 7: Salary and Stress Analysis
+
+# R Code for Objective 7: Salary and Stress Analysis
+
+# Load necessary library for data manipulation and plotting
+
+library(dplyr)
+library(ggplot2)
+
+
+
+# 1. Calculate the mean Stress_Level for each Salary_Range and sort
+stress_by_salary <- data %>%
+  group_by(Salary_Range) %>%
+  summarise(
+    Mean_Stress_Level = mean(Stress_Level, na.rm = TRUE)
+  ) %>%
+  arrange(desc(Mean_Stress_Level))
+
+# 2. Print the results table
+print(stress_by_salary)
+
+# 3. Create a bar chart using ggplot2 for visualization
+# reorder() ensures the bars are displayed from highest to lowest stress
+ggplot(stress_by_salary, aes(x = reorder(Salary_Range, -Mean_Stress_Level), y = Mean_Stress_Level)) +
+  geom_bar(stat = "identity", fill = "#5B9CFF") + # Using a standard color
+  labs(
+    title = "Mean Stress Level by Salary Range (Highest to Lowest)",
+    x = "Salary Range",
+    y = "Mean Stress Level"
+  ) +
+  geom_text(aes(label = round(Mean_Stress_Level, 2)), vjust = -0.5, color = "black") + # Add data labels
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
